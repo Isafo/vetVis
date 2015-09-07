@@ -1,6 +1,7 @@
 
 #include "Object.h"
 
+#include <iostream>
 #include <vector>
 
 class Container {

@@ -1,3 +1,4 @@
+#include <string>
 
 template<typename T>
 class Vec3 {
@@ -6,7 +7,7 @@ class Vec3 {
 
 class Vec3f {
 
-friend Vec3f operator*(float i, Vec3f v);
+	friend Vec3f operator*(int i, Vec3f v);	friend std::ostream& operator<< (std::ostream &out, const Vec3f &v);
 
 public:
 	Vec3f();
@@ -23,3 +24,4 @@ protected:
 };
 
 Vec3f operator*(float i, Vec3f v);
+std::ostream& operator<< (std::ostream &out, const Vec3f &v);

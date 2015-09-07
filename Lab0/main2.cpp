@@ -3,15 +3,12 @@
 
 #include "Container.h"
 
-
-
-//#include "Float.h"
-//#include "String.h"
-
+#include "Float.h"
+#include "String.h"
 
 int main(int argc, char *argv[]){
   
-    /*Container objects;
+    Container objects;
 
     Float f1(0.1);
     Float f2(0.2);
@@ -28,7 +25,7 @@ int main(int argc, char *argv[]){
     objects.add(&s2);
     objects.add(&f1);
 
-    objects.print(); */
+    objects.print();
   
   return 0;
 }

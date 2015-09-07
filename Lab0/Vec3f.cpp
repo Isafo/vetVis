@@ -56,9 +56,17 @@ Vec3f& Vec3f::operator% (const Vec3f &other) {
 	return newVec;
 }
 
-Vec3f operator*(float i, Vec3f v) {
-	for (int i = 0; i < 3; i++) {
-		v.value[i] = v.value[i] * i;
+Vec3f operator*(int i, Vec3f v) {
+	for (int j = 0; j < 3; j++) {
+		v.value[j] = v.value[j] * i;
 	}
 	return v;
+}
+
+std::ostream& operator<< (std::ostream &out, const Vec3f &v) {
+
+	out << "test";
+
+	out << "( "<< v.value[0]  << v.value[1] << ", " << v.value[2] << " )";
+	return out;
 }
