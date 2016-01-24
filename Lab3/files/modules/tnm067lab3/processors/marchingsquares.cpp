@@ -41,25 +41,6 @@ namespace inviwo {
 	bool calcAvg(double val[4], float threshold);
 	vec2 evalCoord(int point, int x, int y, size2_t dim);
 
-	//int caseTable[16][8] = {{ -1, -1, -1, -1, -1, -1, -1, -1},
-	//						{ -1, -1, -1, -1, 3, 2, 3, 0 },		// case 1
-	//						{ -1, -1, 2, 1, 2, 3, -1, -1 },
-	//						{ -1, -1, 2, 1, -1, -1, 3, 0 },		// case 3
-	//						{ 1, 0, 1, 2, -1, -1, -1, -1 },		
-	//						{ 1, 0, 1, 2, 3, 2, 3, 0 },			// case 5
-	//						{ 1, 0, -1, -1, 2, 3, -1, -1 },	
-	//						{ 1, 0, -1, -1, -1, -1, 3, 0 },		// case 7
-	//						{ 0, 1, -1, -1, -1, -1, 0, 3 },
-	//						{ 0, 1, -1, -1, 3, 2, -1, -1 },		// case 9
-	//						{ 0, 1, 2, 1, 2, 3, 0, 3 },
-	//						{ 0, 1, 2, 1, -1, -1, -1, -1 },		// case 11
-	//						{ -1, -1, 1, 2, -1, -1, 0, 3 },
-	//						{ -1, -1, 1, 2, 3, 2, -1, -1 },		// case 13
-	//						{ -1, -1, -1, -1, 2, 3, 0, 3 },
-	//						{ -1, -1, -1, -1, -1, -1, -1, -1 }	// case 15
-	//};
-
-
 	int caseTable[16][8] = {{ -1, -1, -1, -1, -1, -1, -1, -1 },
 							{ 3, 2, 3, 0, -1, -1, -1, -1 },		// case 1
 							{ 2, 1, 2, 3, -1, -1, -1, -1 },
@@ -77,8 +58,6 @@ namespace inviwo {
 							{ 2, 3, 0, 3, -1, -1, -1, -1, },
 							{ -1, -1, -1, -1, -1, -1, -1, -1 }	// case 15
 	};
-
-	int table[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
 // The Class Identifier has to be globally unique. Use a reverse DNS naming scheme
 ProcessorClassIdentifier(MarchingSquares,  "org.inviwo.MarchingSquares")
@@ -115,6 +94,13 @@ void MarchingSquares::process() {
 	ivec2 pos;
 	std::vector<int> thresholdImg;
 
+	/*vec3 ms(0.0f, 0.0f, -0.1f);
+	vec3 me(dims.x, dims.y, -0.1f);
+	mesh->addIndex(mesh->addVertex(ms, vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+	mesh->addIndex(mesh->addVertex(me, vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+	lines_.setData(mesh);
+	return;*/
+
 	for (int y = 0; y < dims.y; y++)
 		for (int x = 0; x < dims.x; x++) {
 			pos = ivec2(x, y);
@@ -124,9 +110,11 @@ void MarchingSquares::process() {
 				thresholdImg.push_back(0);
 		}
 	
+	//ivec2 dims_scaling(1.0f/dims.x, 1.0f/dims.y);
+	ivec2 dims_scaling(1.0f, 1.0f);
 	//x, x+1, dims.x*y+x, dims.x*y+x+1
 	int b[4];
-	double val[4];
+	double val[4], tempVal[4];
 	vec2 coord1, coord2;
 	int point1, point2;
 	vec2 midPoint[4];
@@ -137,15 +125,18 @@ void MarchingSquares::process() {
 			b[2] = thresholdImg.at(dims.x*(y + 1) + x + 1);
 			b[3] = thresholdImg.at(dims.x*(y + 1) + x);
 
-			// nedan är fel
+			// nedan blir fel
 			val[0] = inImage->getValueAsSingleDouble(ivec2(x, y));
-			val[1] = inImage->getValueAsSingleDouble(ivec2(x+1, y));
+			val[1] = inImage->getValueAsSingleDouble(ivec2(x + 1, y));
 			val[2] = inImage->getValueAsSingleDouble(ivec2(x + 1, y + 1));
 			val[3] = inImage->getValueAsSingleDouble(ivec2(x, y + 1));
 
 			// temp ges i R = [0], G = [1], B = [2], A = [3], för första punkten ara punkten 4,5,6,7....
-			const unsigned char*  temp = static_cast<const unsigned char*> (inImage->getData());
-			//temp[1]
+			/*const unsigned char*  temp = static_cast<const unsigned char*> (inImage->getData());
+			val[0] = temp[dims.x * y + x] / 255.0;
+			val[1] = temp[dims.x * y + (x + 4)] / 255.0;
+			val[2] = temp[dims.x * (y + 4) + (x + 4)] / 255.0;
+			val[3] = temp[dims.x * (y + 4) + x] / 255.0;*/
 
 			auto c = caseTable[calcBin(b)];
 			int i;
@@ -153,10 +144,12 @@ void MarchingSquares::process() {
 			for (i = 0;  i < 8; i += 2) {
 				if (c[i] == -1)
 					break;
-				// fetch first 2 values (1, 2)
-				point1 = caseTable[calcBin(b)][i];	// 3
-				point2 = caseTable[calcBin(b)][i+1];// 2
 
+				// fetch first 2 points in the case
+				point1 = c[i];
+				point2 = c[i+1];
+
+				// find the coordinates
 				coord1 = evalCoord(point1, x, y, dims);
 				coord2 = evalCoord(point2, x, y, dims);
 
@@ -164,57 +157,65 @@ void MarchingSquares::process() {
 				float t = (threshold_.get() - val[point1]) / (val[point2] - val[point1]);
 				
 				midPoint[j] = (t*coord1 + (1-t)*coord2);
+
 				j++;
 			}
+
+			// check special case
 			if (i > 6) {
-				if (calcAvg(val, threshold_.get())) {
+				if (!calcAvg(val, threshold_.get())) {
 					// bindas med andra två punkter över 1
 					if (b[0] == 1) {
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[0].x * dims_scaling.x, midPoint[0].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[1].x * dims_scaling.x, midPoint[1].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[2].x * dims_scaling.x, midPoint[2].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[3].x * dims_scaling.x, midPoint[3].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+
 					}
 					else {
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[0].x * dims_scaling.x, midPoint[0].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[3].x * dims_scaling.x, midPoint[3].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[1].x * dims_scaling.x, midPoint[1].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[2].x * dims_scaling.x, midPoint[2].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
 					}
 				}
 				else {
 					// bindas med andra två punkter under 1
 					if (b[0] == 1) {
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[0].x * dims_scaling.x, midPoint[0].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[3].x * dims_scaling.x, midPoint[3].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[1].x * dims_scaling.x, midPoint[1].y * dims_scaling.y, - 0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[2].x * dims_scaling.x, midPoint[2].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
 					}
 					else {
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-						mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-					}
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[0].x * dims_scaling.x, midPoint[0].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[1].x * dims_scaling.x, midPoint[1].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[2].x * dims_scaling.x, midPoint[2].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						mesh->addIndex(mesh->addVertex(vec3(midPoint[3].x * dims_scaling.x, midPoint[3].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
 
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[2], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+						//mesh->addIndex(mesh->addVertex(vec3(midPoint[3], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+					}
 				}
 			}
+			// no special case
 			else if (i > 1) {
-				mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-				mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+				mesh->addIndex(mesh->addVertex(vec3(midPoint[0].x * dims_scaling.x, midPoint[0].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+				mesh->addIndex(mesh->addVertex(vec3(midPoint[1].x * dims_scaling.x, midPoint[1].y * dims_scaling.y, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
 
+				//std::cout << midPoint[0].x << " " << midPoint[0].y << " " << std::endl;
+				//std::cout << midPoint[1].x << " " << midPoint[1].y << " " << std::endl;
+				//mesh->addIndex(mesh->addVertex(vec3(midPoint[0], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
+				//mesh->addIndex(mesh->addVertex(vec3(midPoint[1], -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
 			}
 		}
-
-
-
-    //An example of how to draw a line, remove this and add implement marching squares to generate lines
-    // See: http://en.wikipedia.org/wiki/Marching_squares
-    //mesh->addIndex(mesh->addVertex(vec3(0.1, 0.1, 0.1), vec3(0.1, 0.1, 0), vec4(1.0, 0.0, 0.0, 1.0)));
-    //mesh->addIndex(mesh->addVertex(vec3(0.9, 0.9, -0.1f), vec3(0.9, 0.9, 0), vec4(0.0, 0.0, 1.0, 1.0)));
-
-
-
     lines_.setData(mesh);
 }
 
@@ -242,7 +243,7 @@ vec2 evalCoord(int point, int x, int y, size2_t dim) {
 }
 
 int calcBin(int b[4]) {
-	return (b[0] * 1 + b[1] * 2 + b[2] * 4 + b[3] * 8);
+	return (b[0] * 8 + b[1] * 4 + b[2] * 2 + b[3] * 1);
 }
 
 } // namespace
